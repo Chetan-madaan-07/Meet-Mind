@@ -16,7 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { loginUser } from "../services/api";
-import { saveToken, saveUser } from "../utils/storage";
+import { saveToken, saveRefreshToken, saveUser } from "../utils/storage";
 
 const { width } = Dimensions.get("window");
 
@@ -90,6 +90,9 @@ export default function LoginScreen({ navigation }) {
     try {
       const data = await loginUser(email.trim().toLowerCase(), password);
       await saveToken(data.access_token);
+      if (data.refresh_token) {
+        await saveRefreshToken(data.refresh_token);
+      }
       await saveUser(data.user);
       navigation.replace("Home");
     } catch (err) {

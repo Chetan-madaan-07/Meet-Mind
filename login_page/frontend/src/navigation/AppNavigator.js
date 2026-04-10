@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
-import { getToken } from "../utils/storage";
+import { getToken, removeToken } from "../utils/storage";
+import { getProfile } from "../services/api";
 
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
 import HomeScreen from "../screens/HomeScreen";
 import MeetingRoomScreen from "../screens/MeetingRoomScreen";
+import MeetingSummaryScreen from "../screens/MeetingSummaryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -22,10 +24,14 @@ export default function AppNavigator() {
     try {
       const token = await getToken();
       if (token) {
+        await getProfile();
         setInitialRoute("Home");
+      } else {
+        setInitialRoute("Login");
       }
     } catch {
-      // Token check failed, default to Login
+      await removeToken();
+      setInitialRoute("Login");
     } finally {
       setIsLoading(false);
     }
@@ -52,6 +58,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="MeetingRoom" component={MeetingRoomScreen} />
+      <Stack.Screen name="MeetingSummary" component={MeetingSummaryScreen} />
     </Stack.Navigator>
   );
 }

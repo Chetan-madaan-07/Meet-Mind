@@ -1,14 +1,54 @@
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "meetmind_jwt_token";
+const REFRESH_TOKEN_KEY = "meetmind_refresh_token";
 const USER_KEY = "meetmind_user_data";
+
+const secureSetItem = async (key, value) => {
+  if (Platform.OS === "web") {
+    await AsyncStorage.setItem(key, value);
+    return;
+  }
+  const isAvailable = await SecureStore.isAvailableAsync();
+  if (!isAvailable) {
+    await AsyncStorage.setItem(key, value);
+    return;
+  }
+  await SecureStore.setItemAsync(key, value);
+};
+
+const secureGetItem = async (key) => {
+  if (Platform.OS === "web") {
+    return AsyncStorage.getItem(key);
+  }
+  const isAvailable = await SecureStore.isAvailableAsync();
+  if (!isAvailable) {
+    return AsyncStorage.getItem(key);
+  }
+  return SecureStore.getItemAsync(key);
+};
+
+const secureDeleteItem = async (key) => {
+  if (Platform.OS === "web") {
+    await AsyncStorage.removeItem(key);
+    return;
+  }
+  const isAvailable = await SecureStore.isAvailableAsync();
+  if (!isAvailable) {
+    await AsyncStorage.removeItem(key);
+    return;
+  }
+  await SecureStore.deleteItemAsync(key);
+};
 
 /**
  * Save JWT token to secure storage.
  */
 export const saveToken = async (token) => {
   try {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await secureSetItem(TOKEN_KEY, token);
   } catch (error) {
     console.error("Error saving token:", error);
   }
@@ -19,9 +59,32 @@ export const saveToken = async (token) => {
  */
 export const getToken = async () => {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    return await secureGetItem(TOKEN_KEY);
   } catch (error) {
     console.error("Error getting token:", error);
+    return null;
+  }
+};
+
+/**
+ * Save refresh token.
+ */
+export const saveRefreshToken = async (refreshToken) => {
+  try {
+    await secureSetItem(REFRESH_TOKEN_KEY, refreshToken);
+  } catch (error) {
+    console.error("Error saving refresh token:", error);
+  }
+};
+
+/**
+ * Retrieve refresh token from storage.
+ */
+export const getRefreshToken = async () => {
+  try {
+    return await secureGetItem(REFRESH_TOKEN_KEY);
+  } catch (error) {
+    console.error("Error getting refresh token:", error);
     return null;
   }
 };
@@ -31,7 +94,8 @@ export const getToken = async () => {
  */
 export const removeToken = async () => {
   try {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await secureDeleteItem(TOKEN_KEY);
+    await secureDeleteItem(REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
   } catch (error) {
     console.error("Error removing token:", error);

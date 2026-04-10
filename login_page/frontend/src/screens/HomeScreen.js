@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { getProfile } from "../services/api";
-import { removeToken, getUser } from "../utils/storage";
+import { getProfile, startMeeting } from "../services/api";
+import { removeToken } from "../utils/storage";
 
 export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -43,18 +43,11 @@ export default function HomeScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      // Try to get profile from API
       const profileData = await getProfile();
       setUser(profileData);
     } catch {
-      // Fallback to stored user data
-      const storedUser = await getUser();
-      if (storedUser) {
-        setUser(storedUser);
-      } else {
-        // No valid session, redirect to login
-        navigation.replace("Login");
-      }
+      await removeToken();
+      navigation.replace("Login");
     } finally {
       setLoading(false);
     }
@@ -91,8 +84,14 @@ export default function HomeScreen({ navigation }) {
     return "Good Evening";
   };
 
-  const launchMeetingRoom = () => {
-    navigation.navigate("MeetingRoom");
+  const launchMeetingRoom = async () => {
+    try {
+      const meeting = await startMeeting();
+      navigation.navigate("MeetingRoom", { roomId: meeting.meeting_id });
+    } catch (error) {
+      const message = error?.response?.data?.detail || "Could not start meeting right now.";
+      Alert.alert("Unable to start meeting", message);
+    }
   };
 
   if (loading) {
@@ -178,7 +177,12 @@ export default function HomeScreen({ navigation }) {
                 color: "#e94560",
                 onPress: launchMeetingRoom,
               },
-              { icon: "mic-outline", label: "Record", color: "#ffa502" },
+              {
+                icon: "mic-outline",
+                label: "Record",
+                color: "#ffa502",
+                onPress: launchMeetingRoom,
+              },
               { icon: "document-text-outline", label: "Notes", color: "#7bed9f" },
               { icon: "analytics-outline", label: "Insights", color: "#70a1ff" },
             ].map((action, index) => (

@@ -15,7 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { signupUser } from "../services/api";
-import { saveToken, saveUser } from "../utils/storage";
+import { saveToken, saveRefreshToken, saveUser } from "../utils/storage";
 
 export default function SignupScreen({ navigation }) {
   const [name, setName] = useState("");
@@ -100,8 +100,8 @@ export default function SignupScreen({ navigation }) {
       setError("Please enter a valid email address");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -109,6 +109,9 @@ export default function SignupScreen({ navigation }) {
     try {
       const data = await signupUser(name.trim(), email.trim().toLowerCase(), password);
       await saveToken(data.access_token);
+      if (data.refresh_token) {
+        await saveRefreshToken(data.refresh_token);
+      }
       await saveUser(data.user);
       navigation.replace("Home");
     } catch (err) {
@@ -239,7 +242,7 @@ export default function SignupScreen({ navigation }) {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password (min. 6 characters)"
+                  placeholder="Password (min. 8 characters)"
                   placeholderTextColor="#5a6380"
                   value={password}
                   onChangeText={setPassword}
