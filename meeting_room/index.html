@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MeetMind Room</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="background-glow"></div>
+
+    <main class="app-shell">
+      <aside class="sidebar">
+        <h1>MeetMind Call</h1>
+        <p class="subtitle">Realtime group calls for teams and friends.</p>
+
+        <section class="panel">
+          <label for="nameInput">Your Name</label>
+          <input id="nameInput" placeholder="e.g. Alex" maxlength="40" />
+
+          <label for="roomInput">Room ID</label>
+          <div class="row">
+            <input id="roomInput" placeholder="team-standup" maxlength="64" />
+            <button id="randomRoomBtn" class="ghost">Random</button>
+          </div>
+
+          <label for="tokenInput">JWT Token (optional)</label>
+          <input id="tokenInput" placeholder="Paste token from login app" />
+
+          <div class="row controls">
+            <button id="joinBtn" class="primary">Join Room</button>
+            <button id="leaveBtn" class="danger" disabled>Leave</button>
+          </div>
+
+          <div class="row controls">
+            <button id="muteBtn" disabled>Mute</button>
+            <button id="videoBtn" disabled>Video Off</button>
+            <button id="shareBtn" disabled>Share Screen</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Participants</h2>
+          <ul id="participantsList"></ul>
+        </section>
+
+        <section class="panel chat-panel">
+          <h2>Room Chat</h2>
+          <div id="chatMessages" class="chat-messages"></div>
+          <div class="row">
+            <input id="chatInput" placeholder="Message everyone..." />
+            <button id="sendBtn" class="primary" disabled>Send</button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="stage">
+        <div id="statusBar" class="status">Idle</div>
+        <div id="videoGrid" class="video-grid">
+          <article class="video-card placeholder">
+            <p>Join a room to start your call</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

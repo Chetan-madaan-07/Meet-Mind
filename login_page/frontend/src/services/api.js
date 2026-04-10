@@ -4,8 +4,10 @@ import { getToken } from "../utils/storage";
 
 // Web runs on the same machine; mobile devices need the host LAN IP.
 const HOST_IP = "10.21.168.92";
-const BASE_URL =
+export const BASE_URL =
   Platform.OS === "web" ? "http://localhost:8000" : `http://${HOST_IP}:8000`;
+
+export const MEETING_WEB_URL = `${BASE_URL}/meeting`;
 
 const api = axios.create({
   baseURL: BASE_URL,
