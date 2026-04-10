@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { NativeModules, Platform } from "react-native";
 import axios from "axios";
 import {
   getToken,
@@ -7,10 +7,62 @@ import {
   removeToken,
 } from "../utils/storage";
 
-// Web runs on the same machine; mobile devices need the host LAN IP.
-const HOST_IP = "10.21.168.92";
-export const BASE_URL =
-  Platform.OS === "web" ? "http://localhost:8000" : `http://${HOST_IP}:8000`;
+const trimTrailingSlash = (value) => value.replace(/\/+$/, "");
+
+const getHostFromScriptURL = () => {
+  const scriptURL = NativeModules?.SourceCode?.scriptURL;
+  if (!scriptURL) return null;
+  try {
+    return new URL(scriptURL).hostname || null;
+  } catch {
+    return null;
+  }
+};
+
+const getHostFromExpoConfig = () => {
+  try {
+    // Optional dependency in Expo projects; safe fallback if unavailable.
+    const Constants = require("expo-constants").default;
+    const hostUri =
+      Constants?.expoConfig?.hostUri ||
+      Constants?.manifest2?.extra?.expoClient?.hostUri ||
+      Constants?.manifest?.debuggerHost;
+    if (!hostUri) return null;
+    return String(hostUri).split(":")[0] || null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveBaseUrl = () => {
+  const apiUrlOverride = process.env.EXPO_PUBLIC_API_URL;
+  if (apiUrlOverride) {
+    return trimTrailingSlash(apiUrlOverride);
+  }
+
+  if (Platform.OS === "web") {
+    return "http://localhost:8000";
+  }
+
+  const apiHostOverride = process.env.EXPO_PUBLIC_API_HOST;
+  if (apiHostOverride) {
+    return `http://${apiHostOverride}:8000`;
+  }
+
+  const detectedHost = getHostFromExpoConfig() || getHostFromScriptURL();
+  if (detectedHost) {
+    return `http://${detectedHost}:8000`;
+  }
+
+  // Last-resort default for local Android emulator use.
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:8000";
+  }
+
+  return "http://localhost:8000";
+};
+
+export const BASE_URL = resolveBaseUrl();
 
 export const MEETING_WEB_URL = `${BASE_URL}/meeting`;
 

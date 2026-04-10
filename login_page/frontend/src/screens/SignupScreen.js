@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { signupUser } from "../services/api";
+import { BASE_URL, signupUser } from "../services/api";
 import { saveToken, saveRefreshToken, saveUser } from "../utils/storage";
 
 export default function SignupScreen({ navigation }) {
@@ -115,8 +115,12 @@ export default function SignupScreen({ navigation }) {
       await saveUser(data.user);
       navigation.replace("Home");
     } catch (err) {
+      const isNetworkError = !err.response;
       const message =
-        err.response?.data?.detail || "Signup failed. Please try again.";
+        err.response?.data?.detail ||
+        (isNetworkError
+          ? `Signup failed: cannot reach backend at ${BASE_URL}`
+          : "Signup failed. Please try again.");
       setError(message);
     } finally {
       setLoading(false);

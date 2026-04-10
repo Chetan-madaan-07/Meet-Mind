@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { loginUser } from "../services/api";
+import { BASE_URL, loginUser } from "../services/api";
 import { saveToken, saveRefreshToken, saveUser } from "../utils/storage";
 
 const { width } = Dimensions.get("window");
@@ -96,8 +96,12 @@ export default function LoginScreen({ navigation }) {
       await saveUser(data.user);
       navigation.replace("Home");
     } catch (err) {
+      const isNetworkError = !err.response;
       const message =
-        err.response?.data?.detail || "Login failed. Please try again.";
+        err.response?.data?.detail ||
+        (isNetworkError
+          ? `Login failed: cannot reach backend at ${BASE_URL}`
+          : "Login failed. Please try again.");
       setError(message);
     } finally {
       setLoading(false);

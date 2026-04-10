@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "sqlite+aiosqlite:///./meet_mind.db"
     )
+    DB_SCHEMA: str = os.getenv("DB_SCHEMA", "public")
     JWT_SECRET: str = "change-this-to-a-secure-random-string"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_EXPIRY_MINUTES: int = 60

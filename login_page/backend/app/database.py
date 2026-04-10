@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import text
+import re
 from app.config import get_settings
 
 settings = get_settings()
@@ -14,6 +15,9 @@ engine_kwargs = {
 if "postgresql" in settings.DATABASE_URL or "postgres" in settings.DATABASE_URL:
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
+    schema_name = (settings.DB_SCHEMA or "public").strip()
+    if "asyncpg" in settings.DATABASE_URL and schema_name and schema_name != "public":
+        engine_kwargs["connect_args"] = {"server_settings": {"search_path": schema_name}}
 else:
     # SQLite needs special async setup
     engine_kwargs["connect_args"] = {"check_same_thread": False}
@@ -48,7 +52,17 @@ async def get_db():
 
 async def create_tables():
     """Create all database tables on startup."""
+    # Ensure all ORM models are imported so SQLAlchemy metadata is fully registered.
+    from app import models  # noqa: F401
+
     async with engine.begin() as conn:
+        if "postgresql" in settings.DATABASE_URL or "postgres" in settings.DATABASE_URL:
+            schema_name = (settings.DB_SCHEMA or "public").strip()
+            if schema_name and schema_name != "public":
+                if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", schema_name):
+                    raise ValueError("DB_SCHEMA must be a valid PostgreSQL identifier")
+                await conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'))
+                await conn.execute(text(f'SET search_path TO "{schema_name}"'))
         await conn.run_sync(Base.metadata.create_all)
         await ensure_schema_compatibility(conn)
 
