@@ -206,6 +206,20 @@ export const getMeetingSummary = async (meetingId) => {
   return response.data;
 };
 
+export const getMeetingHistory = async (params = {}) => {
+  const response = await api.get("/api/meetings", { params });
+  return response.data;
+};
+
+export const getTaskBoard = async (params = {}) => {
+  const response = await api.get("/api/tasks", { params });
+  return response.data;
+};
+
+export const deleteMeeting = async (meetingId) => {
+  await api.delete(`/api/meetings/${meetingId}`);
+};
+
 export const updateTaskStatus = async (taskId, status) => {
   const response = await api.patch(`/api/tasks/${taskId}`, { status });
   return response.data;

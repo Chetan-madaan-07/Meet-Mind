@@ -183,8 +183,18 @@ export default function HomeScreen({ navigation }) {
                 color: "#ffa502",
                 onPress: launchMeetingRoom,
               },
-              { icon: "document-text-outline", label: "Notes", color: "#7bed9f" },
-              { icon: "analytics-outline", label: "Insights", color: "#70a1ff" },
+              {
+                icon: "time-outline",
+                label: "History",
+                color: "#7bed9f",
+                onPress: () => navigation.navigate("MeetingHistory"),
+              },
+              {
+                icon: "albums-outline",
+                label: "Task Board",
+                color: "#70a1ff",
+                onPress: () => navigation.navigate("TaskBoard"),
+              },
             ].map((action, index) => (
               <TouchableOpacity
                 key={index}

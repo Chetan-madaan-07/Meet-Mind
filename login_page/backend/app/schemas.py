@@ -62,6 +62,23 @@ class TranscriptResponse(BaseModel):
     updated_at: datetime.datetime | None = None
 
 
+class MeetingHistoryItem(BaseModel):
+    meeting_id: str
+    title: str
+    status: str
+    created_at: datetime.datetime
+    ended_at: datetime.datetime | None = None
+    duration_seconds: int | None = None
+
+
+class MeetingHistoryResponse(BaseModel):
+    items: list[MeetingHistoryItem] = Field(default_factory=list)
+    page: int
+    page_size: int
+    total: int
+    has_more: bool
+
+
 class MeetingStopResponse(BaseModel):
     meeting_id: str
     status: str
@@ -101,6 +118,24 @@ class TaskResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TaskBoardItem(BaseModel):
+    id: int
+    meeting_id: str
+    meeting_title: str
+    text: str
+    assignee: str | None = None
+    status: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class TaskBoardResponse(BaseModel):
+    todo: list[TaskBoardItem] = Field(default_factory=list)
+    in_progress: list[TaskBoardItem] = Field(default_factory=list)
+    done: list[TaskBoardItem] = Field(default_factory=list)
+    total: int
 
 
 class UserResponse(BaseModel):

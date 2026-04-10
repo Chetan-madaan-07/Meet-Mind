@@ -3,13 +3,13 @@ import json
 import re
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 import time
 from typing import Dict
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from jose import JWTError, jwt
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import decode_access_token
@@ -18,9 +18,13 @@ from app.database import AsyncSessionLocal, get_db
 from app.dependencies import get_current_user
 from app.models import Meeting, MeetingSummary, Task, Transcript, TranscriptChunk, User
 from app.schemas import (
+    MeetingHistoryItem,
+    MeetingHistoryResponse,
     MeetingStartResponse,
     MeetingStopResponse,
     MeetingSummaryResponse,
+    TaskBoardItem,
+    TaskBoardResponse,
     TaskResponse,
     TaskStatusUpdateRequest,
     TranscriptResponse,
@@ -376,6 +380,13 @@ def get_meeting_duration_seconds(meeting: Meeting) -> int | None:
     return max(0, seconds)
 
 
+def get_history_retention_days(user_plan: str | None) -> int:
+    normalized = (user_plan or "free").strip().lower()
+    if normalized in {"pro", "pro_plan", "team", "team_plan"}:
+        return 365
+    return 7
+
+
 @router.post("/api/meetings/start", response_model=MeetingStartResponse)
 async def start_meeting(
     db: AsyncSession = Depends(get_db),
@@ -422,6 +433,94 @@ async def start_meeting(
         meeting_id=meeting.id,
         status=meeting.status,
         started_at=meeting.created_at,
+    )
+
+
+@router.get("/api/meetings", response_model=MeetingHistoryResponse)
+async def list_meetings(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=50),
+    search: str | None = Query(default=None, max_length=200),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Paginated meeting history for the authenticated user.
+    Supports title/transcript search and inclusive date-range filtering.
+    Applies plan-based retention window (Free: 7 days, Pro/Team: 365 days).
+    """
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from must be on or before date_to",
+        )
+
+    retention_days = get_history_retention_days(current_user.plan)
+    retention_cutoff = datetime.utcnow() - timedelta(days=retention_days)
+
+    filters = [
+        Meeting.user_id == current_user.id,
+        Meeting.created_at >= retention_cutoff,
+    ]
+
+    if date_from is not None:
+        from_dt = datetime.combine(date_from, dt_time.min)
+        filters.append(Meeting.created_at >= from_dt)
+    if date_to is not None:
+        to_exclusive = datetime.combine(date_to + timedelta(days=1), dt_time.min)
+        filters.append(Meeting.created_at < to_exclusive)
+
+    search_value = (search or "").strip().lower()
+    if search_value:
+        like_pattern = f"%{search_value}%"
+        transcript_match_exists = (
+            select(Transcript.meeting_id)
+            .where(
+                Transcript.meeting_id == Meeting.id,
+                func.lower(Transcript.full_text).like(like_pattern),
+            )
+            .exists()
+        )
+        filters.append(
+            or_(
+                func.lower(Meeting.title).like(like_pattern),
+                transcript_match_exists,
+            )
+        )
+
+    base_stmt = select(Meeting).where(*filters)
+    total_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total_result = await db.execute(total_stmt)
+    total = int(total_result.scalar_one() or 0)
+
+    paginated_stmt = (
+        base_stmt.order_by(Meeting.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    meetings_result = await db.execute(paginated_stmt)
+    meetings = meetings_result.scalars().all()
+
+    items = [
+        MeetingHistoryItem(
+            meeting_id=meeting.id,
+            title=meeting.title,
+            status=meeting.status,
+            created_at=meeting.created_at,
+            ended_at=meeting.ended_at,
+            duration_seconds=get_meeting_duration_seconds(meeting),
+        )
+        for meeting in meetings
+    ]
+
+    return MeetingHistoryResponse(
+        items=items,
+        page=page,
+        page_size=page_size,
+        total=total,
+        has_more=(page * page_size) < total,
     )
 
 
@@ -544,6 +643,66 @@ async def get_meeting_summary(
     )
 
 
+@router.get("/api/tasks", response_model=TaskBoardResponse)
+async def get_task_board(
+    status_filter: str | None = Query(default=None, alias="status", pattern="^(todo|in_progress|done)$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Return user's tasks grouped by Kanban status columns.
+    Optional ?status=... returns only that column's tasks.
+    """
+    stmt = (
+        select(Task, Meeting.title)
+        .join(Meeting, Meeting.id == Task.meeting_id)
+        .where(Task.user_id == current_user.id)
+        .order_by(Task.updated_at.desc(), Task.id.desc())
+    )
+    if status_filter:
+        stmt = stmt.where(Task.status == status_filter)
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    grouped = {
+        "todo": [],
+        "in_progress": [],
+        "done": [],
+    }
+
+    for task, meeting_title in rows:
+        item = TaskBoardItem(
+            id=task.id,
+            meeting_id=task.meeting_id,
+            meeting_title=meeting_title or "Untitled Meeting",
+            text=task.text,
+            assignee=task.assignee,
+            status=task.status,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+        )
+        if task.status in grouped:
+            grouped[task.status].append(item)
+
+    if status_filter:
+        total = len(grouped[status_filter])
+        return TaskBoardResponse(
+            todo=grouped["todo"] if status_filter == "todo" else [],
+            in_progress=grouped["in_progress"] if status_filter == "in_progress" else [],
+            done=grouped["done"] if status_filter == "done" else [],
+            total=total,
+        )
+
+    total = len(grouped["todo"]) + len(grouped["in_progress"]) + len(grouped["done"])
+    return TaskBoardResponse(
+        todo=grouped["todo"],
+        in_progress=grouped["in_progress"],
+        done=grouped["done"],
+        total=total,
+    )
+
+
 @router.patch("/api/tasks/{task_id}", response_model=TaskResponse)
 async def update_task_status(
     task_id: int,
@@ -564,6 +723,30 @@ async def update_task_status(
         await db.flush()
 
     return TaskResponse.model_validate(task)
+
+
+@router.delete("/api/meetings/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting(
+    meeting_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Delete a meeting and all associated records (cascade on FK constraints).
+    """
+    meeting_result = await db.execute(select(Meeting).where(Meeting.id == meeting_id))
+    meeting = meeting_result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meeting not found")
+    if meeting.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    # Explicitly remove dependent records so behavior is deterministic across DB engines.
+    await db.execute(delete(Task).where(Task.meeting_id == meeting_id))
+    await db.execute(delete(TranscriptChunk).where(TranscriptChunk.meeting_id == meeting_id))
+    await db.execute(delete(Transcript).where(Transcript.meeting_id == meeting_id))
+    await db.execute(delete(MeetingSummary).where(MeetingSummary.meeting_id == meeting_id))
+    await db.delete(meeting)
 
 
 @router.websocket("/ws/transcription/{meeting_id}")
