@@ -2,8 +2,11 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from app.database import create_tables
 from app.routers.auth import router as auth_router
+from app.routers.meeting import router as meeting_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -34,6 +37,12 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(auth_router)
+app.include_router(meeting_router)
+
+# Serve the browser meeting-room client from /meeting
+meeting_room_path = Path(__file__).resolve().parents[2] / "meeting_room"
+if meeting_room_path.exists():
+    app.mount("/meeting", StaticFiles(directory=str(meeting_room_path), html=True), name="meeting")
 
 
 @app.get("/", tags=["Health"])

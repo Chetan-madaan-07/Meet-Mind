@@ -1,0 +1,241 @@
+:root {
+  --bg-a: #081726;
+  --bg-b: #0f2f4f;
+  --bg-c: #17384f;
+  --card: rgba(255, 255, 255, 0.08);
+  --card-border: rgba(255, 255, 255, 0.16);
+  --text: #f8fafc;
+  --muted: #c7d2da;
+  --primary: #08bdbd;
+  --danger: #e11d48;
+  --ok: #10b981;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 12% 10%, #1a7fa4, transparent 40%),
+    linear-gradient(145deg, var(--bg-a), var(--bg-b) 55%, var(--bg-c));
+}
+
+.background-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 85% 85%, rgba(8, 189, 189, 0.12), transparent 35%);
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.subtitle {
+  margin-top: -2px;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 14px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input,
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+}
+
+input {
+  width: 100%;
+  color: var(--text);
+  background: rgba(2, 6, 23, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  margin-bottom: 10px;
+}
+
+input:focus {
+  outline: 1px solid rgba(8, 189, 189, 0.7);
+}
+
+button {
+  cursor: pointer;
+  color: #f8fafc;
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+button:hover:enabled {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--primary);
+  color: #001b1b;
+  font-weight: 700;
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+button.ghost {
+  background: transparent;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.controls {
+  margin-top: 2px;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+}
+
+.status {
+  background: rgba(2, 6, 23, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--muted);
+  width: fit-content;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  height: 100%;
+}
+
+.video-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 220px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.video-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-card footer {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: rgba(2, 6, 23, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 0.82rem;
+}
+
+.video-card.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+#participantsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#participantsList li {
+  background: rgba(2, 6, 23, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  padding: 8px 10px;
+}
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+
+.chat-messages {
+  flex: 1;
+  min-height: 160px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  padding-right: 4px;
+}
+
+.chat-line {
+  margin-bottom: 8px;
+  background: rgba(2, 6, 23, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.chat-line strong {
+  color: #dbeafe;
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+}

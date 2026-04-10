@@ -91,6 +91,10 @@ export default function HomeScreen({ navigation }) {
     return "Good Evening";
   };
 
+  const launchMeetingRoom = () => {
+    navigation.navigate("MeetingRoom");
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -168,7 +172,12 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
             {[
-              { icon: "calendar-outline", label: "Meetings", color: "#e94560" },
+              {
+                icon: "videocam-outline",
+                label: "Meeting Room",
+                color: "#e94560",
+                onPress: launchMeetingRoom,
+              },
               { icon: "mic-outline", label: "Record", color: "#ffa502" },
               { icon: "document-text-outline", label: "Notes", color: "#7bed9f" },
               { icon: "analytics-outline", label: "Insights", color: "#70a1ff" },
@@ -177,6 +186,7 @@ export default function HomeScreen({ navigation }) {
                 key={index}
                 style={styles.actionCard}
                 activeOpacity={0.7}
+                onPress={action.onPress}
               >
                 <View
                   style={[
